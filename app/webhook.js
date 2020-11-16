@@ -69,6 +69,21 @@ function getChannelsSubscribed() {
     });
 }
 
+function connectChat() {
+  const _client = new tmi.client({
+    identity: {
+      username: process.env.TWITCH_USERNAME,
+      password: process.env.TWITCH_PASSWORD,
+    },
+  });
+  // Connect to client
+  _client.connect().catch(console.error);
+  _client.on("connected", function (addr, port) {
+    tmi_client = _client;
+    console.log(`Connected to chat ${addr}:${port}`);
+  });
+}
+
 function getClientAuthToken() {
   const options = {
     url: "https://id.twitch.tv/oauth2/token",
@@ -88,18 +103,7 @@ function getClientAuthToken() {
       // Get channels subscribeds
       getChannelsSubscribed();
 
-      const _client = new tmi.client({
-        identity: {
-          username: "marvellbot",
-          password: process.env.TWITCH_CHAT_SECRET,
-        },
-      });
-      // Connect to client
-      _client.connect().catch(console.error);
-      _client.on("connected", function (addr, port) {
-        tmi_client = _client;
-        console.log(`Connected to chat ${addr}:${port}`);
-      });
+      connectChat();
     })
     .catch(function (error) {
       console.error(error.response.data);
