@@ -3,6 +3,7 @@ const OAuth2Strategy = require("passport-oauth").OAuth2Strategy;
 const jwt = require("jsonwebtoken");
 const axios = require("axios");
 const webhook = require("./webhook");
+const token = require("../common/token");
 
 // Override passport profile function to get user profile from Twitch API
 OAuth2Strategy.prototype.userProfile = function (accessToken, done) {
@@ -82,21 +83,16 @@ module.exports = {
         res.status(404).send({});
         return;
       }
-      jwt.verify(
-        Buffer.from(req.params.token, "base64").toString(),
-        process.env.MARVELL_SECRET,
-        { ignoreExpiration: false, maxAge: Number.parseInt(process.env.TOKEN_TIMEOUT) },
-        function (err, decoded) {
-          if (err) {
-            console.log(err);
-            res.status(404).send({});
-            return;
-          }
-          passport.authenticate("twitch", {
-            scope: "user:read:email channel:moderate chat:edit chat:read",
-          })(req, res, next);
+      token.verify(function (err, decoded) {
+        if (err) {
+          console.log(err);
+          res.status(404).send({});
+          return;
         }
-      );
+        passport.authenticate("twitch", {
+          scope: "user:read:email channel:moderate chat:edit chat:read",
+        })(req, res, next);
+      });
     });
   },
 };
