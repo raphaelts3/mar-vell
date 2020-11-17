@@ -1,1 +1,2 @@
-app: node index.js
+web: npm start
+discord: npm run discord

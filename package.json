@@ -6,9 +6,11 @@
   "scripts": {
     "start": "node app",
     "watch": "node_modules/.bin/nodemon -w app/ app",
+    "watch-discord": "node_modules/.bin/nodemon -w discord/ discord",
     "test": "node_modules/.bin/mocha",
     "lint": "node_modules/.bin/eslint --fix",
-    "token": "node cli/token.js"
+    "token": "node cli/token.js",
+    "discord": "node discord"
   },
   "repository": {
     "type": "git",
@@ -16,7 +18,8 @@
   },
   "keywords": [
     "bot",
-    "twitch"
+    "twitch",
+    "discord"
   ],
   "author": "Raphael Tomé Santana",
   "license": "MIT",
@@ -28,6 +31,7 @@
     "axios": "^0.21.0",
     "body-parser": "^1.19.0",
     "dotenv": "^8.2.0",
+    "eris": "^0.14.0",
     "express": "^4.17.1",
     "express-session": "^1.17.1",
     "handlebars": "^4.7.6",
