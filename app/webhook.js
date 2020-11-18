@@ -265,9 +265,10 @@ async function subscribeToBans(user) {
   });
 }
 
-async function subscribeToWebHooks() {
-  const webhooks = [subscribeToBans()];
-  return Promise.all(hooks);
+function subscribeToWebHooks(user) {
+  // Loop throught all possible webhooks and pass the user to them
+  const webhooks = [subscribeToBans].map((fn) => fn(user));
+  Promise.all(webhooks).catch(console.error);
 }
 
 // Function to properly setup the webhooks part on the application
@@ -288,7 +289,7 @@ function setup(app) {
     }
     // Check if webhook is a ban
     if (req.body.subscription.type === "channel.ban") {
-      processBan(req.body.event).catch(console.error);
+      processBan(req.body.event);
     }
     // Return 200 to confirm the receiving
     res.send({});
