@@ -283,7 +283,7 @@ function setup(app) {
       return;
     }
     // Check if webhook is a ban
-    if (req.body.signature.type === "channel.ban") {
+    if (req.body.subscription.type === "channel.ban") {
       processBan(req.body.event).catch(console.error);
     }
     // Return 200 to confirm the receiving
