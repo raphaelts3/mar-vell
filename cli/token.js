@@ -1,3 +1,3 @@
 const token = require("../common/token");
 
-module.exports = token.generate();
+console.log(token.generate());

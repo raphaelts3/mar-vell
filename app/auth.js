@@ -26,7 +26,7 @@ OAuth2Strategy.prototype.userProfile = function (accessToken, done) {
     });
 };
 
-// Override passport serializer, because the data is already good 
+// Override passport serializer, because the data is already good
 passport.serializeUser(function (user, done) {
   done(null, user);
 });
@@ -70,7 +70,7 @@ function setup(app) {
     if (req.session && req.session.passport && req.session.passport.user) {
       console.debug(JSON.stringify(req.session.passport.user));
       res.send("You're good to go! :-)");
-      webhook.subscribeToWebHooks(req.session.passport.user).catch(console.error);
+      webhook.subscribeToWebHooks(req.session.passport.user);
     } else {
       res.status(404).send({});
     }
@@ -103,5 +103,5 @@ function setup(app) {
 }
 
 module.exports = {
-  setup
+  setup,
 };
