@@ -5,7 +5,7 @@ const tmi = require("tmi.js");
 const duplicatedMessageCheck = {};
 /**{
  channel: string,
- joined: bool
+ joined: bool     => Show if we already joined in this channel chat
 }
  */
 const channelsSubscribed = {};
@@ -14,6 +14,11 @@ var clientAuthToken = null;
 // Chat client, created on sucessfull 'getClientAuthToken' call
 var tmi_client = null;
 
+// TODO: Log it in a external place
+const logRequestError = (error) => console.error(error.response.data);
+
+// Function that can be used if we need to remove webhooks,
+// good when subscribing just for test
 function deleteSubscription(id) {
   const options = {
     url: "https://api.twitch.tv/helix/eventsub/subscriptions",
@@ -31,11 +36,11 @@ function deleteSubscription(id) {
     .then(function (response) {
       console.log(response.data);
     })
-    .catch(function (error) {
-      console.error(error.response.data);
-    });
+    .catch(logRequestError);
 }
 
+// Function to get all channels that the bot have already
+// subscribed to fullfill the list os channels to broadcast.
 function getChannelsSubscribed() {
   const options = {
     url: "https://api.twitch.tv/helix/eventsub/subscriptions",
@@ -61,14 +66,14 @@ function getChannelsSubscribed() {
             channel: await getChannelInformation(broadcaster_id),
             joined: false,
           };
+          // TODO: Cache this information, so we don't have to call it everytime
         }
       });
     })
-    .catch(function (error) {
-      console.error(error.response.data);
-    });
+    .catch(logRequestError);
 }
 
+// Just connect to twitch chat with marvellbot account
 function connectChat() {
   const _client = new tmi.client({
     identity: {
@@ -79,11 +84,13 @@ function connectChat() {
   // Connect to client
   _client.connect().catch(console.error);
   _client.on("connected", function (addr, port) {
+    // Save client to be used in other places
     tmi_client = _client;
     console.log(`Connected to chat ${addr}:${port}`);
   });
 }
 
+// Request the client_credentials to use in few requests
 function getClientAuthToken() {
   const options = {
     url: "https://id.twitch.tv/oauth2/token",
@@ -99,17 +106,20 @@ function getClientAuthToken() {
     .then(function (response) {
       // Save client Auth Token
       clientAuthToken = response.data.access_token;
+      // TODO: This can be cached or better handled
+      // instead of autheticating every load
 
-      // Get channels subscribeds
+      // Get channels subscribeds to have a list of
+      // channels to broadcast
       getChannelsSubscribed();
 
+      // Connect to chat to broadcast the commands
       connectChat();
     })
-    .catch(function (error) {
-      console.error(error.response.data);
-    });
+    .catch(logRequestError);
 }
 
+// Function to get the channel name to connect on its chat
 async function getChannelInformation(broadcaster_id) {
   return new Promise((resolve, reject) => {
     const options = {
@@ -126,32 +136,40 @@ async function getChannelInformation(broadcaster_id) {
 
     axios(options)
       .then(function (response) {
-        const _data = response.data.data[0];
-        if (_data.broadcaster_name !== undefined) {
-          resolve(_data.broadcaster_name);
-        }
-        resolve(null);
+        // TODO: Return all the broadcaster names associated, instead of only the first
+        resolve(response.data.data[0].broadcaster_name);
       })
       .catch(function (error) {
+        logRequestError(error);
         resolve(null);
       });
   });
 }
 
-function broadcastBan(event) {
+// Process a 'channel.ban' webhook received
+function processBan(event) {
+  // Loop through all the channels that are also using
+  // Mar-Vell Bot and try to ban the user on them as well
   Object.keys(channelsSubscribed).forEach(async (user_id) => {
+    // We don't need to replicate the ban on the channel that banned it
     if (user_id === event.broadcaster_user_id) {
       return;
     }
     const _data = channelsSubscribed[user_id];
     if (_data.channel === null) {
+      // Something went wrong at `getChannelInformation` and we don't
+      // have this user channel
+      // TODO: try to get the channel information again and replicate the ban
       console.warn(`${user_id} channel is null`);
       return;
     }
+    // Check if we've already connected to this user chat
     if (_data.joined === false) {
+      // If not, request the join
       await tmi_client.join(_data.channel);
       _data.joined = true;
     }
+    // It should be joined here, and we can propagate the ban to it
     tmi_client
       .ban(
         _data.channel,
@@ -242,27 +260,40 @@ async function subscribeToBans(user) {
   });
 }
 
-module.exports = {
-  subscribeToBans,
-  setup: function (app) {
-    // Set route to handle webhook callbacks
-    app.post("/webhook/callback", function (req, res) {
-      console.log(req.body);
-      if (req.body.challenge !== undefined) {
-        res.send(req.body.challenge);
-        return;
-      }
-      if (validateSignature(req) === false) {
-        res.status(400).send({});
-        return;
-      }
-      if (req.body.event !== undefined) {
-        broadcastBan(req.body.event);
-      }
-      res.send();
-    });
+async function subscribeToWebHooks() {
+  const webhooks = [subscribeToBans()];
+  return Promise.all(hooks);
+}
 
-    // Get new client auth when starting the app
-    getClientAuthToken();
-  },
+// Function to properly setup the webhooks part on the application
+function setup(app) {
+  // Set route to handle webhook callbacks, this route will
+  // be called everytime a registered hook is dispatched
+  // on the associated accounts
+  app.post("/webhook/callback", function (req, res) {
+    // Twitch requires this challenge to validate the callback URL
+    if (req.body.challenge !== undefined) {
+      res.send(req.body.challenge);
+      return;
+    }
+    // Validate the webhook signature
+    if (validateSignature(req) === false) {
+      res.status(400).send();
+      return;
+    }
+    // Check if webhook is a ban
+    if (req.body.signature.type === "channel.ban") {
+      processBan(req.body.event).catch(console.error);
+    }
+    // Return 200 to confirm the receiving
+    res.send({});
+  });
+
+  // Get new client auth when starting the app
+  getClientAuthToken();
+}
+
+module.exports = {
+  subscribeToWebHooks,
+  setup,
 };
