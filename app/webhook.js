@@ -150,6 +150,7 @@ async function getChannelInformation(broadcaster_id) {
 function processBan(event) {
   // Loop through all the channels that are also using
   // Mar-Vell Bot and try to ban the user on them as well
+  // TODO: Save those events on our database
   Object.keys(channelsSubscribed).forEach(async (user_id) => {
     // We don't need to replicate the ban on the channel that banned it
     if (user_id === event.broadcaster_user_id) {

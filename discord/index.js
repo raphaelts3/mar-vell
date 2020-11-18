@@ -33,7 +33,7 @@ bot.on("message", (message) => {
   const args = message.content.slice(prefix.length).trim().split(/ +/);
   const command = args.shift().toLowerCase();
 
-  if (command == "generate-tokex") {
+  if (command == "generate-token") {
     return generateToken(message.channel, message.member);
   }
 });
