@@ -80,6 +80,10 @@ function connectChat() {
       username: process.env.TWITCH_USERNAME,
       password: process.env.TWITCH_PASSWORD,
     },
+    connection: {
+      reconnect: true,
+      secure: true
+    },
   });
   // Connect to client
   _client.connect().catch(console.error);
@@ -178,7 +182,7 @@ function processBan(event) {
         `Mar-Vell Bot #${event.broadcaster_user_name}`
       )
       .then(() => {
-        console.log(`Ban ${event.user_name} broadcasted to ${channel}`);
+        console.log(`Ban ${event.user_name} broadcasted to ${_data.channel}`);
       })
       .catch((err) => {
         // Probably already banned, just ignore
